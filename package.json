@@ -1,0 +1,14 @@
+{
+  "name": "sungrow-ws",
+  "module": "main.ts",
+  "type": "module",
+  "dependencies": {
+    "ws": "8.14.1"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
