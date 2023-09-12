@@ -1,6 +1,6 @@
 {
   "name": "sungrow-ws",
-  "module": "main.ts",
+  "module": "main.js",
   "type": "module",
   "dependencies": {
     "ws": "8.14.1"

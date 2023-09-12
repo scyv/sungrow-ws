@@ -26,7 +26,7 @@ const fields = {
         name: "I18N_COMMON_TOTAL_DIRECT_POWER_CONSUMPTION_PV",
         display: "PV-Leistung gesamt bezogen"
     },
-} as { [key: string]: any }
+}
 
 let loggedIn = false;
 let token = "";
@@ -35,7 +35,7 @@ wechselrichter.on('open', () => {
     wechselrichter.send(JSON.stringify(connectMsg));
 });
 
-wechselrichter.on('message', (data: string) => {
+wechselrichter.on('message', (data) => {
     const parsedData = JSON.parse(data);
 
     /* login response
@@ -76,7 +76,7 @@ wechselrichter.on('close', () => {
     console.log('Verbindung geschlossen.');
 });
 
-wechselrichter.on('error', (error: string) => {
+wechselrichter.on('error', (error) => {
     console.error('Fehler bei der Verbindung:', error);
 });
 
@@ -86,9 +86,9 @@ const startDataRequest = () => {
     wechselrichter.send(JSON.stringify(serviceRealRequest));
 }
 
-const processRealData = (list: any) => {
-    const map: any = {};
-    list.forEach((entry: any) => {
+const processRealData = (list) => {
+    const map = {};
+    list.forEach((entry) => {
         map[entry.data_name] = entry;
     });
     Object.keys(fields).forEach(key => {
