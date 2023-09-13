@@ -104,17 +104,18 @@ const processRealData = (list) => {
   list.forEach((entry) => {
     map[entry.data_name] = entry;
   });
+  const data = {};
   Object.keys(fields).forEach((key) => {
     const fieldDef = fields[key];
-    client.publish(
-      "sungrow/data/" + key,
-      JSON.stringify({
-        ...fieldDef,
-        value: map[fieldDef.name].data_value,
-        unit: map[fieldDef.name].data_unit,
-      })
-    );
+    data[key] = {
+      ...fieldDef,
+      value: map[fieldDef.name].data_value,
+      unit: map[fieldDef.name].data_unit,
+    };
     console.log(fieldDef.display + ": " + map[fieldDef.name].data_value + map[fieldDef.name].data_unit);
   });
+
+  client.publish("sungrow/data", JSON.stringify(data));
+
   console.log("");
 };
