@@ -78,7 +78,7 @@ wechselrichter.on("message", (data) => {
       console.log("Fehler bei Login. Versuche es nochmal in 10 Sekunden");
       setTimeout(() => {
         wechselrichter.send(JSON.stringify(connectMsg));
-      }, 7000);
+      }, 5000);
     }
   }
 });
