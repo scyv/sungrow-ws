@@ -13,6 +13,10 @@ const serviceRealRequest = {
 };
 
 const fields = {
+  verbrauch: {
+    name: "I18N_COMMON_LOAD_TOTAL_ACTIVE_POWER",
+    display: "Verbrauch",
+  },
   einspeisung: {
     name: "I18N_COMMON_FEED_NETWORK_TOTAL_ACTIVE_POWER",
     display: "Einspeisung",
@@ -63,7 +67,7 @@ wechselrichter.on("message", (data) => {
     }
     setTimeout(() => {
       startDataRequest();
-    }, 5000);
+    }, 10000);
   } else {
     if (parsedData.result_msg === "success") {
       console.log("Logged in");
