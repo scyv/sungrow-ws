@@ -1,8 +1,6 @@
 const WebSocket = require("ws");
 const mqtt = require("mqtt");
 
-const wechselrichter = new WebSocket("ws://192.168.178.82:8082/ws/home/overview");
-
 const connectMsg = { lang: "de_de", token: "", service: "connect" };
 const serviceRealRequest = {
   lang: "de_de",
@@ -41,15 +39,18 @@ const fields = {
 
 let loggedIn = false;
 let token = "";
-wechselrichter.on("open", () => {
-  console.log("Verbindung hergestellt.");
-  wechselrichter.send(JSON.stringify(connectMsg));
-});
 
-wechselrichter.on("message", (data) => {
-  const parsedData = JSON.parse(data);
+function connectWechselRichter() {
+  const wechselrichter = new WebSocket("ws://192.168.178.82:8082/ws/home/overview");
+  wechselrichter.on("open", () => {
+    console.log("Verbindung hergestellt.");
+    wechselrichter.send(JSON.stringify(connectMsg));
+  });
 
-  /* login response
+  wechselrichter.on("message", (data) => {
+    const parsedData = JSON.parse(data);
+
+    /* login response
      {
     "result_code":	1,
     "result_msg":	"success",
@@ -61,47 +62,51 @@ wechselrichter.on("message", (data) => {
     }
 }*/
 
-  if (loggedIn) {
-    if (parsedData.result_data && parsedData.result_data.service === "real") {
-      processRealData(parsedData.result_data.list);
-    }
-    setTimeout(() => {
-      startDataRequest();
-    }, 10000);
-  } else {
-    if (parsedData.result_msg === "success") {
-      console.log("Logged in");
-      token = parsedData.result_data.token;
-      loggedIn = true;
-      startDataRequest();
-    } else {
-      console.log("Fehler bei Login. Versuche es nochmal in 10 Sekunden");
+    if (loggedIn) {
+      if (parsedData.result_data && parsedData.result_data.service === "real") {
+        processRealData(parsedData.result_data.list);
+      }
       setTimeout(() => {
-        wechselrichter.send(JSON.stringify(connectMsg));
-      }, 5000);
+        startDataRequest();
+      }, 7000);
+    } else {
+      if (parsedData.result_msg === "success") {
+        console.log("Logged in");
+        token = parsedData.result_data.token;
+        loggedIn = true;
+        startDataRequest();
+      } else {
+        console.log("Fehler bei Login. Versuche es nochmal in 10 Sekunden");
+        setTimeout(() => {
+          wechselrichter.send(JSON.stringify(connectMsg));
+        }, 10000);
+      }
     }
-  }
-});
+  });
 
-wechselrichter.on("close", () => {
-  console.log("Verbindung geschlossen.");
-});
+  wechselrichter.on("close", () => {
+    console.log("Verbindung geschlossen.");
+    setTimeout(() => {
+      connectWechselRichter();
+    }, 5000);
+  });
 
-wechselrichter.on("error", (error) => {
-  console.error("Fehler bei der Verbindung:", error);
-});
+  wechselrichter.on("error", (error) => {
+    console.error("Fehler bei der Verbindung:", error);
+  });
+  const startDataRequest = () => {
+    serviceRealRequest.token = token;
+    serviceRealRequest.time123456 = Date.now();
+    wechselrichter.send(JSON.stringify(serviceRealRequest));
+  };
+}
+connectWechselRichter();
 
 const client = mqtt.connect("mqtt://192.168.178.44");
 
 client.on("connect", () => {
   console.log("MQTT Connected");
 });
-
-const startDataRequest = () => {
-  serviceRealRequest.token = token;
-  serviceRealRequest.time123456 = Date.now();
-  wechselrichter.send(JSON.stringify(serviceRealRequest));
-};
 
 const processRealData = (list) => {
   const map = {};
