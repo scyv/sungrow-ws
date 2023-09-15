@@ -108,12 +108,24 @@ client.on("connect", () => {
   console.log("MQTT Connected");
 });
 
+const series = {
+  data: [],
+  add(entry) {
+    if (this.data.length >= 20) {
+      this.data.shift();
+    }
+    this.data.push(entry);
+  },
+};
+
 const processRealData = (list) => {
   const map = {};
   list.forEach((entry) => {
     map[entry.data_name] = entry;
   });
-  const data = {};
+  const data = {
+    time: new Date().toISOString(),
+  };
   Object.keys(fields).forEach((key) => {
     const fieldDef = fields[key];
     data[key] = {
@@ -125,6 +137,7 @@ const processRealData = (list) => {
   });
 
   client.publish("sungrow/data", JSON.stringify(data));
-
+  series.add(data);
+  client.publish("sungrow/hist_data", JSON.stringify(series));
   console.log("");
 };
