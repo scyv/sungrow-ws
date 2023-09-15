@@ -110,11 +110,17 @@ client.on("connect", () => {
 
 const series = {
   data: [],
+  lastAdded: 0,
   add(entry) {
+    if (Date.now() - 60 * 1000 < this.lastAdded) {
+      return false;
+    }
+    this.lastAdded = Date.now();
     if (this.data.length >= 20) {
       this.data.shift();
     }
     this.data.push(entry);
+    return true;
   },
 };
 
@@ -137,7 +143,8 @@ const processRealData = (list) => {
   });
 
   client.publish("sungrow/data", JSON.stringify(data));
-  series.add(data);
-  client.publish("sungrow/hist_data", JSON.stringify(series));
+  if (series.add(data)) {
+    client.publish("sungrow/hist_data", JSON.stringify({ data: series.data }));
+  }
   console.log("");
 };
