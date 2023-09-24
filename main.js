@@ -2,12 +2,12 @@ const WebSocket = require("ws");
 const mqtt = require("mqtt");
 
 const connectMsg = { lang: "de_de", token: "", service: "connect" };
-const serviceRealRequest = {
+const serviceRequest = {
   lang: "de_de",
   token: "",
   dev_id: "1",
-  service: "real",
-  time123456: 1694529060729,
+  service: "",
+  time123456: 0,
 };
 
 const fields = {
@@ -39,6 +39,8 @@ const fields = {
 
 let loggedIn = false;
 let token = "";
+let wrdata = {};
+let pvleistungMax = 0;
 
 function connectWechselRichter() {
   const wechselrichter = new WebSocket("ws://192.168.178.82:8082/ws/home/overview");
@@ -64,8 +66,28 @@ function connectWechselRichter() {
 
     if (loggedIn) {
       if (parsedData.result_data && parsedData.result_data.service === "real") {
-        processRealData(parsedData.result_data.list);
+        wrdata = {
+          ...wrdata,
+          ...processRealData(parsedData.result_data.list),
+        };
+        pvleistungMax = Math.max(pvleistungMax, parseFloat(wrdata["pvleistung"].value));
+        wrdata = {
+          ...wrdata,
+          pvleistungTagesMax: {
+            name: "pvleistungTagesMax",
+            display: "PV-Leistung Tagesmax",
+            value: pvleistungMax.toFixed(2),
+            unit: wrdata["pvleistung"].unit,
+          },
+        };
       }
+      if (parsedData.result_data && parsedData.result_data.service === "direct") {
+        wrdata = {
+          ...wrdata,
+          ...processDirectData(parsedData.result_data.list),
+        };
+      }
+
       setTimeout(() => {
         startDataRequest();
       }, 7000);
@@ -95,12 +117,22 @@ function connectWechselRichter() {
     console.error("Fehler bei der Verbindung:", error);
   });
   const startDataRequest = () => {
-    serviceRealRequest.token = token;
-    serviceRealRequest.time123456 = Date.now();
-    wechselrichter.send(JSON.stringify(serviceRealRequest));
+    const realDataRequest = {
+      ...serviceRequest,
+      service: "real",
+      token: token,
+      time123456: Date.now(),
+    };
+    const directDataRequest = {
+      ...serviceRequest,
+      service: "direct",
+      token: token,
+      time123456: Date.now(),
+    };
+    wechselrichter.send(JSON.stringify(realDataRequest));
+    wechselrichter.send(JSON.stringify(directDataRequest));
   };
 }
-connectWechselRichter();
 
 const client = mqtt.connect("mqtt://192.168.178.44");
 
@@ -124,14 +156,36 @@ const series = {
   },
 };
 
+const logData = () => {
+  console.log("-- " + wrdata.time + " --");
+  Object.keys(wrdata).forEach((key) => {
+    const entry = wrdata[key];
+    if (!entry.display) {
+      return;
+    }
+    console.log(entry.display + ": " + entry.value + entry.unit);
+  });
+  console.log("");
+};
+
+const publishData = () => {
+  wrdata.time = new Date().toString();
+  logData();
+  client.publish("sungrow/data", JSON.stringify(wrdata));
+  if (series.add(wrdata)) {
+    client.publish("sungrow/hist_data", JSON.stringify({ data: series.data }));
+  }
+  setTimeout(() => {
+    publishData();
+  }, 5000);
+};
+
 const processRealData = (list) => {
   const map = {};
   list.forEach((entry) => {
     map[entry.data_name] = entry;
   });
-  const data = {
-    time: new Date().toISOString(),
-  };
+  const data = {};
   Object.keys(fields).forEach((key) => {
     const fieldDef = fields[key];
     data[key] = {
@@ -139,12 +193,67 @@ const processRealData = (list) => {
       value: map[fieldDef.name].data_value,
       unit: map[fieldDef.name].data_unit,
     };
-    console.log(fieldDef.display + ": " + map[fieldDef.name].data_value + map[fieldDef.name].data_unit);
   });
-
-  client.publish("sungrow/data", JSON.stringify(data));
-  if (series.add(data)) {
-    client.publish("sungrow/hist_data", JSON.stringify({ data: series.data }));
-  }
-  console.log("");
+  return data;
 };
+
+/*
+ direct response
+{
+	"result_code":	1,
+	"result_msg":	"success",
+	"result_data":	{
+		"service":	"direct",
+		"list":	[{
+				"name":	"MPPT1",
+				"voltage":	"313.9",
+				"voltage_unit":	"V",
+				"current":	"10.5",
+				"current_unit":	"A"
+			}, {
+				"name":	"MPPT2",
+				"voltage":	"226.7",
+				"voltage_unit":	"V",
+				"current":	"0.0",
+				"current_unit":	"A"
+			}, {
+				"name":	"I18N_COMMON_GROUP_BUNCH_TITLE_AND%@1",
+				"voltage":	"313.6",
+				"voltage_unit":	"V",
+				"current":	"10.50",
+				"current_unit":	"A"
+			}, {
+				"name":	"I18N_COMMON_GROUP_BUNCH_TITLE_AND%@2",
+				"voltage":	"226.7",
+				"voltage_unit":	"V",
+				"current":	"0.00",
+				"current_unit":	"A"
+			}],
+		"count":	4
+	}
+}
+*/
+const processDirectData = (list) => {
+  const map = {};
+  list.forEach((entry) => {
+    map[entry.name] = entry;
+  });
+  const data = {
+    mppt1_leistung: {
+      name: "MPPT1",
+      display: "Leistung MPPT1",
+      value: ((parseFloat(map["MPPT1"].voltage) * parseFloat(map["MPPT1"].current)) / 1000).toFixed(2),
+      unit: "kW",
+    },
+    mppt2_leistung: {
+      name: "MPPT2",
+      display: "Leistung MPPT2",
+      value: ((parseFloat(map["MPPT2"].voltage) * parseFloat(map["MPPT2"].current)) / 1000).toFixed(2),
+      unit: "kW",
+    },
+  };
+  return data;
+};
+
+connectWechselRichter();
+publishData();
