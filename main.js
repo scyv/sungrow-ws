@@ -238,6 +238,10 @@ const processDirectData = (list) => {
   list.forEach((entry) => {
     map[entry.name] = entry;
   });
+
+  const mppt1Max = 10 * 0.435;
+  const mppt2Max = 15 * 0.435;
+
   const data = {
     mppt1_leistung: {
       name: "MPPT1",
@@ -250,6 +254,22 @@ const processDirectData = (list) => {
       display: "Leistung MPPT2",
       value: ((parseFloat(map["MPPT2"].voltage) * parseFloat(map["MPPT2"].current)) / 1000).toFixed(2),
       unit: "kW",
+    },
+    mppt1_leistung_anteil: {
+      name: "MPPT1_PROZ",
+      display: "Leistung Anteil MPPT1",
+      value: (((parseFloat(map["MPPT1"].voltage) * parseFloat(map["MPPT1"].current)) / 1000 / mppt1Max) * 100).toFixed(
+        0
+      ),
+      unit: "%",
+    },
+    mppt2_leistung_anteil: {
+      name: "MPPT2_PROZ",
+      display: "Leistung Anteil MPPT2",
+      value: (((parseFloat(map["MPPT2"].voltage) * parseFloat(map["MPPT2"].current)) / 1000 / mppt2Max) * 100).toFixed(
+        0
+      ),
+      unit: "%",
     },
   };
   return data;
