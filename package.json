@@ -2,7 +2,7 @@
   "name": "sungrow-ws",
   "module": "main.js",
   "dependencies": {
-    "ws": "8.14.1",
-    "mqtt": "5.0.5"
+    "ws": "8.14.2",
+    "mqtt": "5.1.0"
   }
 }

@@ -1,0 +1,4 @@
+{
+  "mqttBrokerUrl": "mqtt://10.10.10.44",
+  "websocketEndpunkt": "ws://10.10.10.45:8082/ws/home/overview"
+}

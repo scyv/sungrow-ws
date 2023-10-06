@@ -1,6 +1,8 @@
 const WebSocket = require("ws");
 const mqtt = require("mqtt");
 
+const config = require("./config.json");
+
 const connectMsg = { lang: "de_de", token: "", service: "connect" };
 const serviceRequest = {
   lang: "de_de",
@@ -43,7 +45,7 @@ let wrdata = {};
 let pvleistungMax = 0;
 
 function connectWechselRichter() {
-  const wechselrichter = new WebSocket("ws://192.168.178.82:8082/ws/home/overview");
+  const wechselrichter = new WebSocket(config.websocketEndpunkt);
   wechselrichter.on("open", () => {
     console.log("Verbindung hergestellt.");
     wechselrichter.send(JSON.stringify(connectMsg));
@@ -51,18 +53,6 @@ function connectWechselRichter() {
 
   wechselrichter.on("message", (data) => {
     const parsedData = JSON.parse(data);
-
-    /* login response
-     {
-    "result_code":	1,
-    "result_msg":	"success",
-    "result_data":	{
-        "service":	"connect",
-        "token":	"f1a23e12-3772-40dc-8f22-a8117c71310a",
-        "uid":	1,
-        "tips_disable":	0
-    }
-}*/
 
     if (loggedIn) {
       if (parsedData.result_data && parsedData.result_data.service === "real") {
@@ -116,6 +106,7 @@ function connectWechselRichter() {
   wechselrichter.on("error", (error) => {
     console.error("Fehler bei der Verbindung:", error);
   });
+
   const startDataRequest = () => {
     const realDataRequest = {
       ...serviceRequest,
@@ -134,7 +125,7 @@ function connectWechselRichter() {
   };
 }
 
-const client = mqtt.connect("mqtt://192.168.178.44");
+const client = mqtt.connect(config.mqttBrokerUrl);
 
 client.on("connect", () => {
   console.log("MQTT Connected");
@@ -197,42 +188,6 @@ const processRealData = (list) => {
   return data;
 };
 
-/*
- direct response
-{
-	"result_code":	1,
-	"result_msg":	"success",
-	"result_data":	{
-		"service":	"direct",
-		"list":	[{
-				"name":	"MPPT1",
-				"voltage":	"313.9",
-				"voltage_unit":	"V",
-				"current":	"10.5",
-				"current_unit":	"A"
-			}, {
-				"name":	"MPPT2",
-				"voltage":	"226.7",
-				"voltage_unit":	"V",
-				"current":	"0.0",
-				"current_unit":	"A"
-			}, {
-				"name":	"I18N_COMMON_GROUP_BUNCH_TITLE_AND%@1",
-				"voltage":	"313.6",
-				"voltage_unit":	"V",
-				"current":	"10.50",
-				"current_unit":	"A"
-			}, {
-				"name":	"I18N_COMMON_GROUP_BUNCH_TITLE_AND%@2",
-				"voltage":	"226.7",
-				"voltage_unit":	"V",
-				"current":	"0.00",
-				"current_unit":	"A"
-			}],
-		"count":	4
-	}
-}
-*/
 const processDirectData = (list) => {
   const map = {};
   list.forEach((entry) => {
