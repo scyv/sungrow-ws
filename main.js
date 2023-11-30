@@ -105,6 +105,9 @@ function connectWechselRichter() {
 
   wechselrichter.on("error", (error) => {
     console.error("Fehler bei der Verbindung:", error);
+    setTimeout(() => {
+      connectWechselRichter();
+    }, 5000);
   });
 
   const startDataRequest = () => {
