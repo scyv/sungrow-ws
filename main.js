@@ -62,10 +62,21 @@ let loggedIn = false;
 let token = "";
 let wrdata = {};
 let pvleistungMax = 0;
+let wechselrichter;
+let tryWsConn = false;
 
 function connectWechselRichter() {
-  const wechselrichter = new WebSocket(config.websocketEndpunkt);
+  wechselrichter = new WebSocket(config.websocketEndpunkt);
+  tryWsConn = true;
+  setTimeout(() => {
+    if (tryWsConn === true) {
+      console.log("Timeout bei Verbindungsversuch.");
+      process.exit(1);
+    }
+  }, 10000);
+  console.log("Versuche Websocket Verbindung...");
   wechselrichter.on("open", () => {
+    tryWsConn = false;
     console.log("Verbindung hergestellt.");
     wechselrichter.send(JSON.stringify(connectMsg));
   });
@@ -105,7 +116,7 @@ function connectWechselRichter() {
 
       setTimeout(() => {
         startDataRequest();
-      }, 7000);
+      }, 15000);
     } else {
       if (parsedData.result_msg === "success") {
         console.log("Logged in");
@@ -122,17 +133,16 @@ function connectWechselRichter() {
   });
 
   wechselrichter.on("close", () => {
-    console.log("Verbindung geschlossen.");
+    tryWsConn = false;
+    console.log("Verbindung geschlossen. Neuer versuch in 30sek");
     setTimeout(() => {
       connectWechselRichter();
-    }, 5000);
+    }, 30000);
   });
 
   wechselrichter.on("error", (error) => {
+    tryWsConn = false;
     console.error("Fehler bei der Verbindung:", error);
-    setTimeout(() => {
-      connectWechselRichter();
-    }, 5000);
   });
 
   const startDataRequest = () => {
@@ -203,7 +213,7 @@ const publishData = () => {
   }
   setTimeout(() => {
     publishData();
-  }, 5000);
+  }, 12000);
 };
 
 const processRealData = (list) => {
