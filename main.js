@@ -39,6 +39,25 @@ const fields = {
   },
 };
 
+const batteryFields = {
+  bat_ladeleistung: {
+    name: "I18N_CONFIG_KEY_3907",
+    display: "Ladeleistung",
+  },
+  bat_entladeleistung: {
+    name: "I18N_CONFIG_KEY_3921",
+    display: "Entladeleistung",
+  },
+  bat_temperatur: {
+    name: "I18N_COMMON_BATTERY_TEMPERATURE",
+    display: "Batterietemperatur",
+  },
+  bat_ladezustand: {
+    name: "I18N_COMMON_BATTERY_SOC",
+    display: "Ladezustand",
+  }
+};
+
 let loggedIn = false;
 let token = "";
 let wrdata = {};
@@ -75,6 +94,12 @@ function connectWechselRichter() {
         wrdata = {
           ...wrdata,
           ...processDirectData(parsedData.result_data.list),
+        };
+      }
+      if (parsedData.result_data && parsedData.result_data.service === "real_battery") {
+        wrdata = {
+          ...wrdata,
+          ...processBatteryData(parsedData.result_data.list),
         };
       }
 
@@ -123,8 +148,15 @@ function connectWechselRichter() {
       token: token,
       time123456: Date.now(),
     };
+    const batteryDataRequest = {
+      ...serviceRequest,
+      service: "real_battery",
+      token: token,
+      time123456: Date.now(),
+    };
     wechselrichter.send(JSON.stringify(realDataRequest));
     wechselrichter.send(JSON.stringify(directDataRequest));
+    wechselrichter.send(JSON.stringify(batteryDataRequest));
   };
 }
 
@@ -182,6 +214,23 @@ const processRealData = (list) => {
   const data = {};
   Object.keys(fields).forEach((key) => {
     const fieldDef = fields[key];
+    data[key] = {
+      ...fieldDef,
+      value: map[fieldDef.name].data_value,
+      unit: map[fieldDef.name].data_unit,
+    };
+  });
+  return data;
+};
+
+const processBatteryData = (list) => {
+  const map = {};
+  list.forEach((entry) => {
+    map[entry.data_name] = entry;
+  });
+  const data = {};
+  Object.keys(batteryFields).forEach((key) => {
+    const fieldDef = batteryFields[key];
     data[key] = {
       ...fieldDef,
       value: map[fieldDef.name].data_value,
