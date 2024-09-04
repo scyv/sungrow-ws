@@ -207,9 +207,13 @@ const logData = () => {
 const publishData = () => {
   wrdata.time = new Date().toString();
   logData();
-  client.publish("sungrow/data", JSON.stringify(wrdata));
+  client.publish("sungrow/data", JSON.stringify(wrdata), {
+    retain: true
+  });
   if (series.add(wrdata)) {
-    client.publish("sungrow/hist_data", JSON.stringify({ data: series.data }));
+    client.publish("sungrow/hist_data", JSON.stringify({ data: series.data }), {
+      retain: true
+    });
   }
   setTimeout(() => {
     publishData();
